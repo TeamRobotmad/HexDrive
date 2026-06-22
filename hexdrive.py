@@ -19,12 +19,6 @@ _MIN_BADGEOS_VERSION = [1, 9, 0]     # v1.9.0 is required to be able to read the
 # Hardware defintions:
 _ENABLE_PIN  = 0  # First LS pin used to enable the SMPSU
 
-# Hardware Version 2
-_COLOUR_INT_PIN = 1  # Second LS pin used to detect interrupts from the colour sensor to trigger readings without polling
-_LED_PIN  = 2        # Third LS pin used to control an LED to illuminate the area under the colour sensor for better readings of reflected light from the surface below.
-_DIST_INT_PIN = 3    # Fourth LS pin used to detect interrupts from the distance sensor to trigger readings without polling
-_DIST_XSHUT_PIN = 4  # Fifth LS pin used to control the XSHUT pin of the distance sensor to allow it to be power cycled for reset or power saving
-
 # Default values and limits:
 _DEFAULT_PWM_FREQ = 20000           # 20kHz is a good default for motors as it is above the audible range for most people and works with most motors and ESCs
 _DEFAULT_SERVO_FREQ = 50            # 50Hz = 20mS period
@@ -53,7 +47,6 @@ class HexDriveType:
         self.name: str = name            # A friendly name for the type of HexDrive
         self.motors: int = motors        # Number of motor channels supported by this type of HexDrive (0, 1 or 2)
         self.servos: int = servos        # Number of servo channels supported by this type of HexDrive (0, 2 or 4)
-        self.hw_ver: int = 0             # Hardware version of this type of HexDrive
 
 _HEXDRIVE_TYPES = (
     HexDriveType(0xCA, motors=2, name="2 Motor"),
@@ -85,8 +78,6 @@ class HexDriveApp(app.App):         # pylint: disable=no-member
             return
         # LS Pins
         self._power_control = self.config.ls_pin[_ENABLE_PIN]
-        self._led_control = self.config.ls_pin[_LED_PIN]
-        self._dist_xshut = self.config.ls_pin[_DIST_XSHUT_PIN]
 
         self._servo_centre = [_SERVO_CENTRE] * _MAX_NUM_CHANNELS
         eventbus.on_async(RequestStopAppEvent, self._handle_stop_app, self)
@@ -119,7 +110,7 @@ class HexDriveApp(app.App):         # pylint: disable=no-member
             return False
 
         # report app starting and which port it is running on
-        print(f"D:HexDrive{'2' if 2 == self._hexdrive_type.hw_ver  else ''} Type:'{self._hexdrive_type.name}' V{self.VERSION} by RobotMad on port {self.config.port}")
+        print(f"D:HexDrive Type:'{self._hexdrive_type.name}' V{self.VERSION} by RobotMad on port {self.config.port}")
 
         # Initialise HS Pins
         for _, hs_pin in enumerate(self.config.pin):
@@ -130,8 +121,6 @@ class HexDriveApp(app.App):         # pylint: disable=no-member
         # Initialise LS Pins
         try:
             self._power_control.init(mode=Pin.OUT)
-            self._led_control.init(mode=Pin.OUT)
-            self._dist_xshut.init(mode=Pin.OUT)
         except Exception as e:      # pylint: disable=broad-except
             print(f"D:{self.config.port}:ls_pin setup failed {e}")
             return False
@@ -146,8 +135,6 @@ class HexDriveApp(app.App):         # pylint: disable=no-member
         """ De-initialise the app - return True if successful, False if failed."""
         # Turn off all PWM outputs & release resources
         self.set_power(False)
-        self._led_control.deinit()
-        self._dist_xshut.deinit()
         self._pwm_deinit()
         for hs_pin in self.config.pin:
             hs_pin.init(mode=Pin.IN)
