@@ -1,0 +1,8 @@
+.gitignore export-ignore
+.gitattributes export-ignore
+README.md export-ignore
+LICENSE export-ignore
+.github/ export-ignore
+.vscode/ export-ignore
+*.py export-ignore
+*.mpy binary -diff
