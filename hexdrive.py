@@ -62,6 +62,10 @@ class HexDriveApp(app.App):         # pylint: disable=no-member
 
     def __init__(self, config: HexpansionConfig | None = None):
         super().__init__()
+
+        if config is None:
+            raise TypeError("HexDriveApp requires a HexpansionConfig on initialisation")
+
         self.config: HexpansionConfig | None = config
         self._hexdrive_type: HexDriveType | None = None
         self._logging: bool = True
@@ -73,9 +77,7 @@ class HexDriveApp(app.App):         # pylint: disable=no-member
         self.PWMOutput: list[PWM | None] = [None] * _MAX_NUM_CHANNELS
         self._freq: list[int] = [0] * _MAX_NUM_CHANNELS
         self._motor_output: list[int] = [0] * _MAX_NUM_MOTORS
-        if config is None:
-            #print("D:No Config")
-            return
+
         # LS Pins
         self._power_control = self.config.ls_pin[_ENABLE_PIN]
 
@@ -190,12 +192,10 @@ class HexDriveApp(app.App):         # pylint: disable=no-member
     def set_power(self, state: bool) -> bool:
         """ Turn the SMPSU on or off. Returns the new power state.
             Note that just because the SMPSU is turned off does not mean that the outputs are NOT energised as there could be external battery power. """
-        if (self.config is None) or (state == self._power_state):
-            return False
+        if state == self._power_state:
+            return True  # No change needed
         if self._logging:
             print(f"D:{self.config.port}:Power={'On' if state else 'Off'}")
-        #if self.get_booster_power():
-            # if the power detect pin is high then the SMPSU has a power source so enable it
         try:
             self._power_control.init(mode=Pin.OUT)
             self._power_control.value(state)
@@ -203,7 +203,7 @@ class HexDriveApp(app.App):         # pylint: disable=no-member
             print(f"D:{self.config.port}:power control failed {e}")
             return False
         self._power_state = state
-        return self._power_state
+        return True
 
 
     def get_power(self) -> bool:
